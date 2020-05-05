@@ -5,6 +5,7 @@ const port = 5000
 const config = require("./config/key");
 const {User} = require("./models/User")
 const cookiePaser = require("cookie-parser");
+const {auth} = require("./middleware/auth");
 
 app.use(bodyParser.urlencoded({extended:true}));
 app.use(bodyParser.json());
@@ -17,7 +18,7 @@ mongoose.connect(config.mongoURI ,{
 
 app.get('/', (req, res) => res.send('Hdello World!'))
 
-app.post("/register", (req,res)=> {
+app.post("/api/users/register", (req,res)=> {
     
     const user = new User(req.body);
     user.save((err, userInfo)=>{
@@ -29,7 +30,7 @@ app.post("/register", (req,res)=> {
         })
     });    
 })
-app.post('/login', (req,res) => {
+app.post('/api/users/login', (req,res) => {
     // 요청된 이메일을 데이터베이스에서 있는지 찾는다.
         User.findOne({email: req.body.email},(err, user)=>{
             if(!user){
@@ -55,4 +56,31 @@ app.post('/login', (req,res) => {
             })
         })
 })
+
+
+app.get('/api/users/auth', auth, function(req,res){
+    res.status(200).json({
+    _id : req.user._id,
+    isAdmin : req.user.role === 0 ? false : true,
+    isAuth : true,
+    email : req.user.email,
+    name : req.user.name,
+    lastname : req.user.lastname,
+    role : req.user.role,
+    image : req.user.image    
+    })
+})
+
+app.get('/api/users/logout', auth, function(req,res){
+    User.findOneAndUpdate({_id: req.user._id},
+        {token : ""},
+        (err, user)=>{
+            if(err) return res.json({success : false, err});
+            return res.status(200).send({
+                success : true
+            })
+        })
+})
+
+
 app.listen(port, () => console.log(`Example app listening at http://localhost:${port}`))
